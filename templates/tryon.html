@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Try-On</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black min-h-screen">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <button onclick="stopFeedAndNavigate('/')" class="text-xl font-bold">← Back to Store</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="flex flex-col md:flex-row gap-8">
+            <!-- Video Feed Container -->
+            <div class="relative flex-grow">
+                <img id="videoFeed" alt="Virtual Try-On Feed" class="rounded-lg shadow-xl max-w-full h-auto">
+                <div class="absolute bottom-4 left-4 text-white bg-black bg-opacity-50 px-4 py-2 rounded-full">
+                    Virtual Try-On Active
+                </div>
+            </div>
+
+            <!-- Enhanced Controls Panel -->
+            <div class="bg-white rounded-lg p-6 shadow-xl w-full md:w-96">
+                <h2 class="text-xl font-bold mb-4">Fit Adjustments</h2>
+                
+                <!-- Size Controls -->
+                <div class="space-y-4">
+                    <!-- Style Selection -->
+
+                    <!-- Width Adjustment -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1"> width reference</label>
+                        <input type="range" id="widthr" min="200" max="1000" step="1" value="262" 
+                               class="w-full" oninput="updateClothingFit()">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Narrower</span>
+                            <span>Wider</span>
+                        </div>
+                    </div>
+
+                    <!-- Height Adjustment -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">shoulder width reference </label>
+                        <input type="range" id="shoulderwidthr" min="150" max="1000" step="1" value="190" 
+                               class="w-full" oninput="updateClothingFit()">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Shorter</span>
+                            <span>Longer</span>
+                        </div>
+                    </div>
+
+                    <!-- Vertical Position -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1"> height</label>
+                        <input type="range" id="height" min="0" max="1000" step="1" value="10" 
+                               class="w-full" oninput="updateClothingFit()">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Up</span>
+                            <span>Down</span>
+                        </div>
+                    </div>
+
+                    <!-- Horizontal Position -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1"> width</label>
+                        <input type="range" id="width" min="0" max="1000" step="1" value="10" 
+                               class="w-full" oninput="updateClothingFit()">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Low</span>
+                            <span>high</span>
+                        </div>
+                    </div>
+
+                    <!-- Rotation Adjustment -->
+
+                    <!-- Shoulder Offset -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">scale x position</label>
+                        <input type="range" id="scalex" min="30" max="200" step="1" value="44" 
+                               class="w-full" oninput="updateClothingFit()">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Higher</span>
+                            <span>Lower</span>
+                        </div>
+                    </div>
+
+                    <!-- Blend Strength -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1"> scale y position</label>
+                        <input type="range" id="scaley" min="30" max="200" step="1" value="48" 
+                               class="w-full" oninput="updateClothingFit()">
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>low</span>
+                            <span>high</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reset Button -->
+                <button onclick="resetControls()" 
+                        class="mt-6 w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors">
+                    Reset All Adjustments
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let debounceTimeout;
+        const urlParams = new URLSearchParams(window.location.search);
+        const itemType = urlParams.get('') ? '' : 'pants';
+        const itemId = urlParams.get('') || urlParams.get('pants');
+
+        async function initializeVideoFeed() {
+            try {
+                await fetch(`/static/${itemType}s/${itemId}`);
+                document.getElementById('videoFeed').src = '/video_feed';
+            } catch (error) {
+                console.error('Error initializing feed:', error);
+                alert('Error initializing the virtual try-on. Please try again.');
+            }
+        }
+
+        function updateClothingFit() {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(async () => {
+                const adjustments = {
+                    widthr: document.getElementById('widthr').value,
+                    shoulderwidthr: document.getElementById('shoulderwidthr').value,
+                    height: document.getElementById('height').value,
+                    width: document.getElementById('width').value,
+                    scalex: document.getElementById('scalex').value,
+                    scaley: document.getElementById('scaley').value,
+                };
+
+                try {
+                    const response = await fetch('/update_fit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(adjustments)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to update fit');
+                    }
+                } catch (error) {
+                    console.error('Error updating fit:', error);
+                }
+            }, 100);
+        }
+
+        function resetControls() {
+                    document.getElementById('widthr').value=262;
+                    document.getElementById('shoulderwidthr').value=190;
+                    document.getElementById('height').value=0;
+                    document.getElementById('width').value=0;
+                    document.getElementById('scalex').value=44;
+                    document.getElementById('scaley').value=48;
+            updateClothingFit();
+        }
+
+        async function stopFeedAndNavigate(path) {
+            try {
+                await fetch('/stop_feed', { method: 'POST' });
+            } catch (error) {
+                console.error('Error stopping feed:', error);
+            } finally {
+                window.location.href = path;
+            }
+        }
+
+        window.addEventListener('beforeunload', async () => {
+            try {
+                await fetch('/stop_feed', { method: 'POST' });
+            } catch (error) {
+                console.error('Error stopping feed:', error);
+            }
+        });
+
+        // Initialize the video feed and set up error handling
+        initializeVideoFeed();
+        document.getElementById('videoFeed').onerror = function() {
+            alert('Unable to connect to video feed. Please make sure the server is running.');
+        };
+    </script>
+</body>
+</html>
